@@ -1,0 +1,24 @@
+{
+  "short_name": "Wallify Pro",
+  "name": "Wallify Pro — Smart Paint Visualizer",
+  "description": "Space-Aware Paint & Finish Visualizer for Interior & Exterior Design",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F7F5F2",
+  "theme_color": "#1F2937",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
