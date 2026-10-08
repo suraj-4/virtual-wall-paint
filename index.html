@@ -4,7 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wallify Pro — Smart Space & Brand Paint Visualizer</title>
-  
+
+  <!-- PWA Meta & Web Manifest Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1F2937">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wallify Pro">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- GSAP CDN -->
@@ -323,7 +332,7 @@
             
             <!-- Active Color Preview Banner -->
             <div class="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
-              <div id="activeColorPreview" class="w-12 h-12 rounded-lg shadow-inner border border-gray-300" style="background-color: #0933;"></div>
+              <div id="activeColorPreview" class="w-12 h-12 rounded-lg shadow-inner border border-gray-300" style="background-color: #F3E2A2;"></div>
               <div class="flex-1 min-w-0">
                 <p id="activeColorName" class="text-xs font-bold text-gray-900 truncate">Morning Glory</p>
                 <p id="activeColorCode" class="text-[11px] font-mono font-semibold text-brand-accent">Asian Paints — 0933</p>
@@ -421,7 +430,6 @@
     const MAX_WORKING_DIM = 2500;
     const MAX_HISTORY = 25;
 
-    // SPACE CATEGORIES & PRESETS CONFIGURATION
     const SPACE_PRESETS = {
       home: {
         bedroom: { label: 'Home > Bedroom', finish: 'matte', shadows: 0.85, highlights: 0.15 },
@@ -443,7 +451,6 @@
       }
     };
 
-    // BRAND SHADE CARDS DATA
     const BRAND_PALETTES = {
       asian: {
         title: 'Asian Paints (Apex & Royale)',
@@ -505,7 +512,7 @@
       activeCategory: 'home',
       activeSubCategory: 'bedroom',
 
-      selectedTool: 'brush', // 'brush' | 'wand' | 'eraser'
+      selectedTool: 'brush',
       brushSize: 40,
       brushSoftness: 50,
       fillTolerance: 32,
@@ -609,7 +616,6 @@
     });
 
     function bindCategoryEvents() {
-      // Main Category Tab Clicks
       document.querySelectorAll('.catSelectBtn').forEach(btn => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.catSelectBtn').forEach(b => {
@@ -626,15 +632,13 @@
           const subGrid = document.getElementById(`subCat${cat.charAt(0).toUpperCase() + cat.slice(1)}`);
           subGrid.classList.remove('hidden');
 
-          // Trigger first sub button
           const firstSub = subGrid.querySelector('.subBtn');
           if(firstSub) firstSub.click();
         });
       });
 
-      // Sub Category Button Clicks
       document.querySelectorAll('.subBtn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', () => {
           const parent = btn.closest('.subCatGrid');
           parent.querySelectorAll('.subBtn').forEach(b => {
             b.className = 'subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300';
@@ -656,7 +660,6 @@
       state.shadowPreservation = config.shadows;
       state.highlightBoost = config.highlights;
 
-      // Update UI Finish Buttons
       document.querySelectorAll('.finishBtn').forEach(b => {
         if(b.dataset.finish === config.finish) {
           b.className = 'finishBtn py-2 bg-brand-accent/10 border-2 border-brand-accent text-brand-accent font-semibold text-xs rounded-lg';
@@ -809,9 +812,9 @@
           const eyeDropper = new EyeDropper();
           const result = await eyeDropper.open();
           setBrandColor('Sampled Shade', 'Eyedropper', result.sRGBHex);
-        } catch (e) { /* Cancelled */ }
+        } catch (e) {}
       } else {
-        alert('Eyedropper API is not supported in this browser version. Use custom hex input.');
+        alert('Eyedropper API is not supported in this browser version.');
       }
     }
 
@@ -843,15 +846,15 @@
       if(type === 'kitchen') {
         g.addColorStop(0, '#EAE5D9'); g.addColorStop(0.7, '#CFC8B8'); g.addColorStop(1, '#4A3E3D');
         ctx.fillStyle = g; ctx.fillRect(0,0,1200,800);
-        ctx.fillStyle = '#2A2E33'; ctx.fillRect(100,450,1000,200); // Counter
+        ctx.fillStyle = '#2A2E33'; ctx.fillRect(100,450,1000,200);
       } else if(type === 'cafe') {
         g.addColorStop(0, '#3D2F28'); g.addColorStop(0.7, '#231A15'); g.addColorStop(1, '#110D0A');
         ctx.fillStyle = g; ctx.fillRect(0,0,1200,800);
-        ctx.fillStyle = '#B88A5A'; ctx.fillRect(300,500,600,180); // Wooden counter
+        ctx.fillStyle = '#B88A5A'; ctx.fillRect(300,500,600,180);
       } else {
         g.addColorStop(0, '#ECE8DF'); g.addColorStop(0.7, '#D4CEBF'); g.addColorStop(1, '#5C4E43');
         ctx.fillStyle = g; ctx.fillRect(0,0,1200,800);
-        ctx.fillStyle = '#2B303A'; ctx.beginPath(); ctx.roundRect(250,480,700,160,20); ctx.fill(); // Sofa
+        ctx.fillStyle = '#2B303A'; ctx.beginPath(); ctx.roundRect(250,480,700,160,20); ctx.fill();
       }
       loadImage(c.toDataURL());
     }
@@ -899,7 +902,6 @@
     }
     window.onresize = fitCanvas;
 
-    /* CANVAS PAINTING & FLOOD FILL */
     let isDrawing = false;
 
     function setupCanvasEvents() {
@@ -1019,7 +1021,6 @@
       saveState();
     }
 
-    /* PHOTOREALISTIC RENDERING ENGINE */
     let renderPending = false;
     function requestRender() {
       if(!renderPending) {
@@ -1099,7 +1100,6 @@
       if(state.compareMode) applyCompare();
     }
 
-    /* HISTORY, VIEWPORT, & EXPORT */
     function saveState() {
       if(state.historyIndex < state.history.length - 1) state.history = state.history.slice(0, state.historyIndex + 1);
       state.history.push({
@@ -1176,7 +1176,6 @@
       ctx.drawImage(state.image, 0, 0);
       ctx.drawImage(DOM.renderCanvas, 0, 0, state.originalWidth, state.originalHeight);
 
-      // Watermark / Brand Spec stamp
       ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(20, exp.height - 70, 450, 50);
       ctx.font = 'bold 16px Inter, sans-serif';
@@ -1190,6 +1189,17 @@
       link.download = `wallify-design-${state.selectedColorName.toLowerCase().replace(/\s+/g, '-')}.png`;
       link.href = exp.toDataURL('image/png');
       link.click();
+    }
+  </script>
+
+  <!-- PWA SERVICE WORKER REGISTRATION SCRIPT -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Wallify Pro SW registered:', reg.scope))
+          .catch((err) => console.error('Wallify Pro SW registration failed:', err));
+      });
     }
   </script>
 </body>
