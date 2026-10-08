@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#F7F5F2]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallify Pro — Smart Space & Brand Paint Visualizer</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- GSAP CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              bg: '#F7F5F2',
+              primary: '#1F2937',
+              secondary: '#6B7280',
+              accent: '#B88A5A',
+              accentHover: '#A0764A'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    input[type="range"] {
+      @apply appearance-none bg-gray-200 h-1.5 rounded-lg outline-none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      @apply appearance-none w-4 h-4 rounded-full bg-brand-accent shadow cursor-pointer transition-transform duration-100 hover:scale-125;
+    }
+    input[type="range"]::-moz-range-thumb {
+      @apply border-none w-4 h-4 rounded-full bg-brand-accent shadow cursor-pointer transition-transform duration-100 hover:scale-125;
+    }
+    .canvas-container { touch-action: none; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+  </style>
+</head>
+<body class="h-full flex flex-col text-brand-primary font-sans antialiased select-none overflow-hidden">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between z-30 shrink-0 shadow-sm">
+    <div class="flex items-center space-x-3 cursor-pointer" id="brandLogo">
+      <div class="w-9 h-9 rounded-xl bg-brand-accent flex items-center justify-center text-white shadow-md shadow-brand-accent/20">
+        <i class="fa-solid fa-paint-roller text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-brand-primary leading-none">WALLIFY <span class="text-xs font-semibold px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded ml-1">PRO</span></h1>
+        <p class="text-[10px] font-medium text-brand-secondary tracking-widest uppercase mt-0.5">Space-Aware Paint & Finish Visualizer</p>
+      </div>
+    </div>
+
+    <!-- Active Category Display -->
+    <div id="activeContextTag" class="hidden md:flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold text-gray-700 border border-gray-200">
+      <i class="fa-solid fa-building text-brand-accent" id="activeCategoryIcon"></i>
+      <span id="activeCategoryLabel">Home &gt; Living Room</span>
+    </div>
+
+    <!-- Header Actions -->
+    <div id="headerActions" class="hidden items-center space-x-2">
+      <button id="btnUndo" disabled class="p-2 text-gray-600 hover:text-brand-primary hover:bg-gray-100 rounded-lg disabled:opacity-40 transition" title="Undo (Ctrl+Z)">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <button id="btnRedo" disabled class="p-2 text-gray-600 hover:text-brand-primary hover:bg-gray-100 rounded-lg disabled:opacity-40 transition" title="Redo (Ctrl+Y)">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+      <div class="h-5 w-px bg-gray-200 mx-1"></div>
+      <button id="btnNewImage" class="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-folder-open"></i>
+        <span>Change Space</span>
+      </button>
+      <button id="btnDownload" class="px-4 py-1.5 text-xs font-semibold text-white bg-brand-accent hover:bg-brand-accentHover rounded-lg shadow-sm transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-download"></i>
+        <span>Export Design</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 relative overflow-hidden bg-brand-bg flex">
+
+    <!-- UPLOAD & CATEGORY SELECTION SCREEN -->
+    <section id="uploadScreen" class="absolute inset-0 z-20 flex items-center justify-center p-6 bg-brand-bg overflow-y-auto">
+      <div class="max-w-3xl w-full text-center space-y-6 my-auto" id="landingCard">
+        
+        <div class="space-y-2">
+          <span class="px-3 py-1 text-xs font-semibold tracking-wider text-brand-accent bg-brand-accent/10 rounded-full uppercase">Step 1: Choose Space Type</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-brand-primary">Where are you applying the paint?</h2>
+          <p class="text-gray-600 text-xs sm:text-sm max-w-lg mx-auto">Select a space category to automatically apply recommended paint finishes, brightness, and official brand shade cards.</p>
+        </div>
+
+        <!-- SPACE CATEGORY SELECTOR TABS -->
+        <div class="grid grid-cols-3 gap-3 max-w-xl mx-auto">
+          <button data-cat="home" class="catSelectBtn p-3 rounded-xl border-2 border-brand-accent bg-white shadow-sm flex flex-col items-center justify-center space-y-1 text-brand-primary font-bold text-xs">
+            <i class="fa-solid fa-house text-lg text-brand-accent"></i>
+            <span>Home</span>
+          </button>
+          <button data-cat="shop" class="catSelectBtn p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 flex flex-col items-center justify-center space-y-1 text-gray-600 font-bold text-xs">
+            <i class="fa-solid fa-store text-lg text-gray-500"></i>
+            <span>Shop & Commercial</span>
+          </button>
+          <button data-cat="industry" class="catSelectBtn p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 flex flex-col items-center justify-center space-y-1 text-gray-600 font-bold text-xs">
+            <i class="fa-solid fa-industry text-lg text-gray-500"></i>
+            <span>Industry & Office</span>
+          </button>
+        </div>
+
+        <!-- SUB-CATEGORY ROOM / SPACE TYPE SELECTION -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm max-w-2xl mx-auto">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 text-left">Select Specific Room / Application Area</p>
+          
+          <div id="subCatHome" class="subCatGrid grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button data-sub="bedroom" class="subBtn active p-2.5 rounded-lg border border-brand-accent bg-brand-accent/5 text-xs font-semibold text-brand-accent flex items-center space-x-2">
+              <i class="fa-solid fa-bed"></i><span>Bedroom</span>
+            </button>
+            <button data-sub="kitchen" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-utensils"></i><span>Kitchen</span>
+            </button>
+            <button data-sub="bathroom" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-bath"></i><span>Bathroom</span>
+            </button>
+            <button data-sub="living" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-couch"></i><span>Living Room</span>
+            </button>
+          </div>
+
+          <div id="subCatShop" class="subCatGrid hidden grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <button data-sub="cloth" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-shirt"></i><span>Clothing</span>
+            </button>
+            <button data-sub="electronic" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-laptop"></i><span>Electronics</span>
+            </button>
+            <button data-sub="retail" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-bag-shopping"></i><span>Retail</span>
+            </button>
+            <button data-sub="cafe" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-mug-hot"></i><span>Cafe</span>
+            </button>
+            <button data-sub="food" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-burger"></i><span>Food Outlet</span>
+            </button>
+          </div>
+
+          <div id="subCatIndustry" class="subCatGrid hidden grid grid-cols-3 gap-2">
+            <button data-sub="factory" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-industry"></i><span>Factory / Mill</span>
+            </button>
+            <button data-sub="warehouse" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-warehouse"></i><span>Warehouse</span>
+            </button>
+            <button data-sub="office" class="subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300">
+              <i class="fa-solid fa-briefcase"></i><span>Corporate Office</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- UPLOAD DROP ZONE -->
+        <div id="dropZone" class="border-2 border-dashed border-gray-300 hover:border-brand-accent bg-white/80 hover:bg-white rounded-2xl p-6 sm:p-8 transition-all duration-300 cursor-pointer shadow-sm group max-w-2xl mx-auto">
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" class="hidden">
+          <div class="flex flex-col items-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-brand-accent/10 flex items-center justify-center text-brand-accent group-hover:scale-110 transition-transform duration-300">
+              <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-brand-primary">Click to upload image or drag & drop</p>
+              <p class="text-[11px] text-gray-500 mt-0.5">Supports JPG, PNG, WEBP (Max 15MB)</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="uploadError" class="hidden p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-circle-exclamation text-sm"></i>
+          <span id="errorMessage">Invalid file format.</span>
+        </div>
+
+        <!-- QUICK PRESET TEMPLATES -->
+        <div class="pt-2 border-t border-gray-200/60 max-w-2xl mx-auto">
+          <p class="text-xs font-medium text-gray-500 mb-2">Or test with preset room templates:</p>
+          <div class="flex items-center justify-center space-x-2 flex-wrap gap-y-2">
+            <button data-demo="living" class="btnDemo px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-xs font-medium rounded-lg shadow-sm transition flex items-center space-x-1.5">
+              <i class="fa-solid fa-couch text-brand-accent"></i>
+              <span>Modern Living Room</span>
+            </button>
+            <button data-demo="kitchen" class="btnDemo px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-xs font-medium rounded-lg shadow-sm transition flex items-center space-x-1.5">
+              <i class="fa-solid fa-utensils text-brand-accent"></i>
+              <span>Modular Kitchen</span>
+            </button>
+            <button data-demo="cafe" class="btnDemo px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-xs font-medium rounded-lg shadow-sm transition flex items-center space-x-1.5">
+              <i class="fa-solid fa-mug-hot text-brand-accent"></i>
+              <span>Cozy Cafe Interior</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- EDITOR & VISUALIZER INTERFACE -->
+    <section id="editorScreen" class="hidden w-full h-full flex flex-col md:flex-row overflow-hidden">
+      
+      <!-- CANVAS VIEWPORT -->
+      <div class="relative flex-1 bg-gray-900 flex items-center justify-center overflow-hidden p-4 min-h-[350px]" id="viewport">
+        
+        <div id="canvasContainer" class="relative shadow-2xl overflow-hidden canvas-container">
+          <canvas id="imageCanvas" class="absolute inset-0 block z-0"></canvas>
+          <canvas id="maskCanvas" class="absolute inset-0 block z-10 pointer-events-none opacity-60"></canvas>
+          <canvas id="renderCanvas" class="relative block z-20"></canvas>
+
+          <!-- Compare Line -->
+          <div id="compareDivider" class="hidden absolute top-0 bottom-0 z-30 w-1 bg-white cursor-ew-resize shadow-[0_0_10px_rgba(0,0,0,0.5)]" style="left: 50%;">
+            <div class="absolute top-1/2 -translate-y-1/2 -left-3.5 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center text-gray-700 text-xs">
+              <i class="fa-solid fa-arrows-left-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Brush Cursor -->
+        <div id="brushCursor" class="hidden fixed pointer-events-none rounded-full border border-white bg-white/20 shadow-sm z-50 transform -translate-x-1/2 -translate-y-1/2"></div>
+
+        <!-- Floating Viewport Toolbar -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-white/20 flex items-center space-x-4 z-30">
+          <button id="btnToggleMask" class="text-xs font-semibold text-gray-700 hover:text-brand-accent flex items-center space-x-1.5 transition">
+            <i class="fa-solid fa-eye text-sm" id="maskEyeIcon"></i>
+            <span id="maskToggleText">Hide Mask</span>
+          </button>
+          <div class="h-4 w-px bg-gray-300"></div>
+          <button id="btnCompare" class="text-xs font-semibold text-gray-700 hover:text-brand-accent flex items-center space-x-1.5 transition">
+            <i class="fa-solid fa-sliders text-sm"></i>
+            <span>Before / After</span>
+          </button>
+          <div class="h-4 w-px bg-gray-300"></div>
+          <button id="btnReset" class="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center space-x-1.5 transition">
+            <i class="fa-solid fa-arrow-rotate-left text-sm"></i>
+            <span>Reset Mask</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTROL PANEL -->
+      <aside class="w-full md:w-80 lg:w-96 bg-white border-l border-gray-200 flex flex-col z-20 shrink-0 h-1/2 md:h-full">
+        
+        <div class="flex border-b border-gray-200 bg-gray-50/50">
+          <button data-tab="selection" class="tabBtn flex-1 py-3 text-xs font-bold border-b-2 border-brand-accent text-brand-accent flex items-center justify-center space-x-1.5 transition">
+            <i class="fa-solid fa-paint-brush"></i>
+            <span>Tools</span>
+          </button>
+          <button data-tab="colors" class="tabBtn flex-1 py-3 text-xs font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center justify-center space-x-1.5 transition">
+            <i class="fa-solid fa-swatchbook"></i>
+            <span>Brand Paints</span>
+          </button>
+          <button data-tab="realism" class="tabBtn flex-1 py-3 text-xs font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center justify-center space-x-1.5 transition">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>Finish & Lighting</span>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+          
+          <!-- TAB 1: SELECTION TOOLS -->
+          <div id="tabSelection" class="tabContent space-y-5">
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2.5">Masking Tools</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button id="toolBrush" class="toolBtn p-2.5 rounded-xl border-2 border-brand-accent bg-brand-accent/5 text-brand-accent font-semibold text-xs flex flex-col items-center justify-center space-y-1 transition">
+                  <i class="fa-solid fa-paintbrush text-base"></i>
+                  <span>Brush</span>
+                </button>
+                <button id="toolWand" class="toolBtn p-2.5 rounded-xl border-2 border-gray-200 bg-white text-gray-600 font-semibold text-xs flex flex-col items-center justify-center space-y-1 hover:border-gray-300 transition">
+                  <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+                  <span>Tap Fill</span>
+                </button>
+                <button id="toolEraser" class="toolBtn p-2.5 rounded-xl border-2 border-gray-200 bg-white text-gray-600 font-semibold text-xs flex flex-col items-center justify-center space-y-1 hover:border-gray-300 transition">
+                  <i class="fa-solid fa-eraser text-base"></i>
+                  <span>Eraser</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Brush Controls -->
+            <div class="space-y-3 bg-gray-50 p-3.5 rounded-xl border border-gray-100">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-gray-700">Brush Size</label>
+                <span id="brushSizeVal" class="text-xs font-semibold text-brand-accent bg-white px-2 py-0.5 rounded border border-gray-200">40px</span>
+              </div>
+              <input type="range" id="brushSize" min="5" max="200" value="40" class="w-full">
+
+              <div class="flex justify-between items-center pt-2">
+                <label class="text-xs font-bold text-gray-700">Edge Softness (Feathering)</label>
+                <span id="brushSoftVal" class="text-xs font-semibold text-brand-accent bg-white px-2 py-0.5 rounded border border-gray-200">50%</span>
+              </div>
+              <input type="range" id="brushSoftness" min="0" max="100" value="50" class="w-full">
+            </div>
+
+            <!-- Flood Fill Tolerance -->
+            <div id="wandControls" class="hidden space-y-2 bg-amber-50/60 p-3.5 rounded-xl border border-amber-100">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-amber-900">Fill Color Tolerance</label>
+                <span id="toleranceVal" class="text-xs font-semibold text-amber-800 bg-white px-2 py-0.5 rounded border border-amber-200">32</span>
+              </div>
+              <input type="range" id="fillTolerance" min="5" max="100" value="32" class="w-full">
+              <p class="text-[11px] text-amber-700 mt-1">Tap wall area to automatically flood-fill surrounding matching pixels.</p>
+            </div>
+          </div>
+
+          <!-- TAB 2: BRAND SHADE CARDS & COLOR SELECTION -->
+          <div id="tabColors" class="tabContent hidden space-y-5">
+            
+            <!-- Active Color Preview Banner -->
+            <div class="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl border border-gray-200">
+              <div id="activeColorPreview" class="w-12 h-12 rounded-lg shadow-inner border border-gray-300" style="background-color: #0933;"></div>
+              <div class="flex-1 min-w-0">
+                <p id="activeColorName" class="text-xs font-bold text-gray-900 truncate">Morning Glory</p>
+                <p id="activeColorCode" class="text-[11px] font-mono font-semibold text-brand-accent">Asian Paints — 0933</p>
+                <p id="activeColorHex" class="text-[10px] font-mono text-gray-500">#F3E2A2</p>
+              </div>
+              <button id="btnEyedropper" class="px-2.5 py-2 bg-white border border-gray-200 hover:bg-gray-100 text-xs font-semibold rounded-lg shadow-sm transition flex flex-col items-center text-gray-700" title="Pick color from photo">
+                <i class="fa-solid fa-eye-dropper text-brand-accent"></i>
+                <span class="text-[9px] mt-0.5">Sample</span>
+              </button>
+            </div>
+
+            <!-- Brand Palette Selector -->
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Select Paint Brand</label>
+              <select id="brandSelect" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:border-brand-accent">
+                <option value="asian">Asian Paints (Apex & Royale)</option>
+                <option value="berger">Berger Paints (WeatherCoat & Silk)</option>
+                <option value="nerolac">Nerolac Paints (Excel & Impression)</option>
+                <option value="dulux">Dulux Paints (Velvet & WeatherShield)</option>
+                <option value="ral">RAL Classic Standard Codes</option>
+              </select>
+            </div>
+
+            <!-- Custom Hex Input -->
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-400 block">Custom Color Picker</label>
+              <div class="flex items-center space-x-2">
+                <input type="color" id="customColorPicker" value="#F3E2A2" class="w-9 h-9 rounded-lg border-0 cursor-pointer p-0">
+                <input type="text" id="customHexInput" value="#F3E2A2" class="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-mono font-semibold uppercase focus:outline-none focus:border-brand-accent">
+              </div>
+            </div>
+
+            <!-- Brand Swatches Container -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-bold uppercase tracking-wider text-gray-400 block" id="brandSwatchesTitle">Asian Paints Shade Card</label>
+                <span class="text-[10px] text-gray-400 font-mono" id="swatchCount">6 Shades</span>
+              </div>
+              <div id="brandSwatchesGrid" class="grid grid-cols-2 gap-2"></div>
+            </div>
+
+          </div>
+
+          <!-- TAB 3: REALISM & FINISH SIMULATOR -->
+          <div id="tabRealism" class="tabContent hidden space-y-5">
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Blending Algorithm</label>
+              <select id="blendModeSelect" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-brand-accent">
+                <option value="photoreal">Realistic Hybrid (Multiply + Specular Highlight)</option>
+                <option value="multiply">Multiply (Deep Shadows)</option>
+                <option value="softlight">Soft Light (Subtle Tint)</option>
+                <option value="luminance">Classic Luminance Preserving</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-2">Paint Finish Simulation</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button data-finish="matte" class="finishBtn py-2 bg-brand-accent/10 border-2 border-brand-accent text-brand-accent font-semibold text-xs rounded-lg">Matte / Flat</button>
+                <button data-finish="satin" class="finishBtn py-2 bg-white border-2 border-gray-200 text-gray-600 font-semibold text-xs rounded-lg hover:border-gray-300">Eggshell / Satin</button>
+                <button data-finish="gloss" class="finishBtn py-2 bg-white border-2 border-gray-200 text-gray-600 font-semibold text-xs rounded-lg hover:border-gray-300">Semi-Gloss</button>
+              </div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs font-semibold"><span class="text-gray-700">Color Intensity</span><span id="valIntensity" class="text-brand-accent">100%</span></div>
+                <input type="range" id="sliderIntensity" min="0" max="100" value="100" class="w-full">
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs font-semibold"><span class="text-gray-700">Shadow Preservation</span><span id="valShadows" class="text-brand-accent">80%</span></div>
+                <input type="range" id="sliderShadows" min="0" max="100" value="80" class="w-full">
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs font-semibold"><span class="text-gray-700">Highlight / Reflection Boost</span><span id="valHighlights" class="text-brand-accent">20%</span></div>
+                <input type="range" id="sliderHighlights" min="0" max="100" value="20" class="w-full">
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs font-semibold"><span class="text-gray-700">Brightness</span><span id="valBrightness" class="text-brand-accent">0</span></div>
+                <input type="range" id="sliderBrightness" min="-100" max="100" value="0" class="w-full">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+    </section>
+  </main>
+
+  <script>
+    const MAX_WORKING_DIM = 2500;
+    const MAX_HISTORY = 25;
+
+    // SPACE CATEGORIES & PRESETS CONFIGURATION
+    const SPACE_PRESETS = {
+      home: {
+        bedroom: { label: 'Home > Bedroom', finish: 'matte', shadows: 0.85, highlights: 0.15 },
+        kitchen: { label: 'Home > Kitchen', finish: 'satin', shadows: 0.70, highlights: 0.30 },
+        bathroom: { label: 'Home > Bathroom', finish: 'gloss', shadows: 0.60, highlights: 0.40 },
+        living: { label: 'Home > Living Room', finish: 'matte', shadows: 0.80, highlights: 0.20 }
+      },
+      shop: {
+        cloth: { label: 'Shop > Clothing Retail', finish: 'satin', shadows: 0.75, highlights: 0.25 },
+        electronic: { label: 'Shop > Electronics Store', finish: 'gloss', shadows: 0.50, highlights: 0.45 },
+        retail: { label: 'Shop > Retail Outlet', finish: 'satin', shadows: 0.70, highlights: 0.30 },
+        cafe: { label: 'Shop > Cafe & Bistro', finish: 'matte', shadows: 0.85, highlights: 0.15 },
+        food: { label: 'Shop > Food Court / Restaurant', finish: 'satin', shadows: 0.70, highlights: 0.35 }
+      },
+      industry: {
+        factory: { label: 'Industry > Factory Floor', finish: 'gloss', shadows: 0.50, highlights: 0.40 },
+        warehouse: { label: 'Industry > Warehouse', finish: 'satin', shadows: 0.65, highlights: 0.25 },
+        office: { label: 'Industry > Corporate Office', finish: 'matte', shadows: 0.80, highlights: 0.20 }
+      }
+    };
+
+    // BRAND SHADE CARDS DATA
+    const BRAND_PALETTES = {
+      asian: {
+        title: 'Asian Paints (Apex & Royale)',
+        shades: [
+          { name: 'Morning Glory', code: '0933', hex: '#F3E2A2' },
+          { name: 'Soothing Sapphire', code: '7326', hex: '#1C4E72' },
+          { name: 'Terracotta', code: '0427', hex: '#C85A32' },
+          { name: 'Beach Shack', code: '8603', hex: '#D9B28C' },
+          { name: 'Paddy Field', code: '7570', hex: '#68A253' },
+          { name: 'Ultra White', code: '0678', hex: '#F4F5F0' }
+        ]
+      },
+      berger: {
+        title: 'Berger Paints (WeatherCoat & Silk)',
+        shades: [
+          { name: 'Turquoise Treat', code: '4T0996', hex: '#00A896' },
+          { name: 'Absolute White', code: '1T1425', hex: '#F8F9FA' },
+          { name: 'Autumn Leaf', code: '2T0604', hex: '#B3542B' },
+          { name: 'Silent Sea', code: '5T1172', hex: '#3B6B88' },
+          { name: 'Golden Glow', code: '3T0812', hex: '#F2C94C' }
+        ]
+      },
+      nerolac: {
+        title: 'Nerolac Paints (Excel & Impression)',
+        shades: [
+          { name: 'Crimson Tide', code: '2244', hex: '#A61C30' },
+          { name: 'Soft Breeze', code: '4120', hex: '#E3EFEA' },
+          { name: 'Desert Sun', code: '1083', hex: '#E8A246' },
+          { name: 'Meadow Green', code: '2581', hex: '#4C8C53' },
+          { name: 'Milky Way', code: '2910', hex: '#F5F2EB' }
+        ]
+      },
+      dulux: {
+        title: 'Dulux Paints (Velvet & WeatherShield)',
+        shades: [
+          { name: 'Monarch Gold', code: '20YY 37/501', hex: '#D4A017' },
+          { name: 'Denim Drift', code: '45BG 17/206', hex: '#6D8294' },
+          { name: 'Tranquil Dawn', code: '45GY 55/052', hex: '#C5D1C3' },
+          { name: 'Crisp White', code: '30GY 88/014', hex: '#F0F3F1' }
+        ]
+      },
+      ral: {
+        title: 'RAL Classic Universal Codes',
+        shades: [
+          { name: 'Green Beige', code: 'RAL 1000', hex: '#CDA434' },
+          { name: 'Flame Red', code: 'RAL 3000', hex: '#AF2B1E' },
+          { name: 'Signal Blue', code: 'RAL 5005', hex: '#154889' },
+          { name: 'Moss Green', code: 'RAL 6005', hex: '#2F4538' },
+          { name: 'Pure White', code: 'RAL 9010', hex: '#F4F4F4' }
+        ]
+      }
+    };
+
+    const state = {
+      image: null,
+      originalWidth: 0, originalHeight: 0,
+      workingWidth: 0, workingHeight: 0,
+      
+      activeCategory: 'home',
+      activeSubCategory: 'bedroom',
+
+      selectedTool: 'brush', // 'brush' | 'wand' | 'eraser'
+      brushSize: 40,
+      brushSoftness: 50,
+      fillTolerance: 32,
+      
+      selectedBrand: 'asian',
+      selectedColorName: 'Morning Glory',
+      selectedColorCode: 'Asian Paints — 0933',
+      selectedColorHex: '#F3E2A2',
+      
+      blendMode: 'photoreal',
+      finish: 'matte',
+      colorIntensity: 1.0,
+      shadowPreservation: 0.8,
+      highlightBoost: 0.2,
+      brightness: 0,
+      
+      isMaskVisible: true,
+      compareMode: false,
+      comparePos: 0.5,
+      
+      history: [],
+      historyIndex: -1
+    };
+
+    const DOM = {
+      uploadScreen: document.getElementById('uploadScreen'),
+      editorScreen: document.getElementById('editorScreen'),
+      dropZone: document.getElementById('dropZone'),
+      fileInput: document.getElementById('fileInput'),
+      uploadError: document.getElementById('uploadError'),
+      errorMessage: document.getElementById('errorMessage'),
+      
+      headerActions: document.getElementById('headerActions'),
+      activeContextTag: document.getElementById('activeContextTag'),
+      activeCategoryLabel: document.getElementById('activeCategoryLabel'),
+      
+      btnUndo: document.getElementById('btnUndo'),
+      btnRedo: document.getElementById('btnRedo'),
+      btnNewImage: document.getElementById('btnNewImage'),
+      btnDownload: document.getElementById('btnDownload'),
+      
+      canvasContainer: document.getElementById('canvasContainer'),
+      imageCanvas: document.getElementById('imageCanvas'),
+      maskCanvas: document.getElementById('maskCanvas'),
+      renderCanvas: document.getElementById('renderCanvas'),
+      viewport: document.getElementById('viewport'),
+      brushCursor: document.getElementById('brushCursor'),
+      compareDivider: document.getElementById('compareDivider'),
+      
+      btnToggleMask: document.getElementById('btnToggleMask'),
+      maskEyeIcon: document.getElementById('maskEyeIcon'),
+      maskToggleText: document.getElementById('maskToggleText'),
+      btnCompare: document.getElementById('btnCompare'),
+      btnReset: document.getElementById('btnReset'),
+      
+      toolBrush: document.getElementById('toolBrush'),
+      toolWand: document.getElementById('toolWand'),
+      toolEraser: document.getElementById('toolEraser'),
+      wandControls: document.getElementById('wandControls'),
+      brushSize: document.getElementById('brushSize'),
+      brushSizeVal: document.getElementById('brushSizeVal'),
+      brushSoftness: document.getElementById('brushSoftness'),
+      brushSoftVal: document.getElementById('brushSoftVal'),
+      fillTolerance: document.getElementById('fillTolerance'),
+      toleranceVal: document.getElementById('toleranceVal'),
+      
+      brandSelect: document.getElementById('brandSelect'),
+      customColorPicker: document.getElementById('customColorPicker'),
+      customHexInput: document.getElementById('customHexInput'),
+      activeColorPreview: document.getElementById('activeColorPreview'),
+      activeColorName: document.getElementById('activeColorName'),
+      activeColorCode: document.getElementById('activeColorCode'),
+      activeColorHex: document.getElementById('activeColorHex'),
+      brandSwatchesTitle: document.getElementById('brandSwatchesTitle'),
+      brandSwatchesGrid: document.getElementById('brandSwatchesGrid'),
+      swatchCount: document.getElementById('swatchCount'),
+      btnEyedropper: document.getElementById('btnEyedropper'),
+      
+      blendModeSelect: document.getElementById('blendModeSelect'),
+      sliderIntensity: document.getElementById('sliderIntensity'),
+      sliderShadows: document.getElementById('sliderShadows'),
+      sliderHighlights: document.getElementById('sliderHighlights'),
+      sliderBrightness: document.getElementById('sliderBrightness'),
+      valIntensity: document.getElementById('valIntensity'),
+      valShadows: document.getElementById('valShadows'),
+      valHighlights: document.getElementById('valHighlights'),
+      valBrightness: document.getElementById('valBrightness')
+    };
+
+    let imgCtx, maskCtx, renderCtx;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      imgCtx = DOM.imageCanvas.getContext('2d', { willReadFrequently: true });
+      maskCtx = DOM.maskCanvas.getContext('2d', { willReadFrequently: true });
+      renderCtx = DOM.renderCanvas.getContext('2d', { willReadFrequently: true });
+      
+      bindCategoryEvents();
+      bindEvents();
+      renderBrandSwatches('asian');
+      gsap.from('#landingCard', { duration: 0.8, y: 20, opacity: 0, ease: 'power3.out' });
+    });
+
+    function bindCategoryEvents() {
+      // Main Category Tab Clicks
+      document.querySelectorAll('.catSelectBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.catSelectBtn').forEach(b => {
+            b.className = 'catSelectBtn p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 flex flex-col items-center justify-center space-y-1 text-gray-600 font-bold text-xs';
+            b.querySelector('i').className = b.querySelector('i').className.replace('text-brand-accent', 'text-gray-500');
+          });
+          btn.className = 'catSelectBtn p-3 rounded-xl border-2 border-brand-accent bg-white shadow-sm flex flex-col items-center justify-center space-y-1 text-brand-primary font-bold text-xs';
+          btn.querySelector('i').className = btn.querySelector('i').className.replace('text-gray-500', 'text-brand-accent');
+
+          const cat = btn.dataset.cat;
+          state.activeCategory = cat;
+
+          document.querySelectorAll('.subCatGrid').forEach(g => g.classList.add('hidden'));
+          const subGrid = document.getElementById(`subCat${cat.charAt(0).toUpperCase() + cat.slice(1)}`);
+          subGrid.classList.remove('hidden');
+
+          // Trigger first sub button
+          const firstSub = subGrid.querySelector('.subBtn');
+          if(firstSub) firstSub.click();
+        });
+      });
+
+      // Sub Category Button Clicks
+      document.querySelectorAll('.subBtn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const parent = btn.closest('.subCatGrid');
+          parent.querySelectorAll('.subBtn').forEach(b => {
+            b.className = 'subBtn p-2.5 rounded-lg border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700 flex items-center space-x-2 hover:border-gray-300';
+          });
+          btn.className = 'subBtn active p-2.5 rounded-lg border border-brand-accent bg-brand-accent/5 text-xs font-semibold text-brand-accent flex items-center space-x-2';
+
+          state.activeSubCategory = btn.dataset.sub;
+          applySpacePreset(state.activeCategory, state.activeSubCategory);
+        });
+      });
+    }
+
+    function applySpacePreset(cat, sub) {
+      const config = SPACE_PRESETS[cat]?.[sub];
+      if(!config) return;
+
+      DOM.activeCategoryLabel.textContent = config.label;
+      state.finish = config.finish;
+      state.shadowPreservation = config.shadows;
+      state.highlightBoost = config.highlights;
+
+      // Update UI Finish Buttons
+      document.querySelectorAll('.finishBtn').forEach(b => {
+        if(b.dataset.finish === config.finish) {
+          b.className = 'finishBtn py-2 bg-brand-accent/10 border-2 border-brand-accent text-brand-accent font-semibold text-xs rounded-lg';
+        } else {
+          b.className = 'finishBtn py-2 bg-white border-2 border-gray-200 text-gray-600 font-semibold text-xs rounded-lg hover:border-gray-300';
+        }
+      });
+
+      DOM.sliderShadows.value = state.shadowPreservation * 100;
+      DOM.sliderHighlights.value = state.highlightBoost * 100;
+      DOM.valShadows.textContent = `${Math.round(state.shadowPreservation * 100)}%`;
+      DOM.valHighlights.textContent = `${Math.round(state.highlightBoost * 100)}%`;
+
+      if(state.image) renderComposite();
+    }
+
+    function bindEvents() {
+      DOM.dropZone.addEventListener('click', () => DOM.fileInput.click());
+      DOM.fileInput.addEventListener('change', (e) => e.target.files.length && processFile(e.target.files[0]));
+      
+      ['dragenter', 'dragover'].forEach(ev => DOM.dropZone.addEventListener(ev, (e) => { e.preventDefault(); DOM.dropZone.classList.add('border-brand-accent'); }));
+      ['dragleave', 'drop'].forEach(ev => DOM.dropZone.addEventListener(ev, (e) => { e.preventDefault(); DOM.dropZone.classList.remove('border-brand-accent'); }));
+      DOM.dropZone.addEventListener('drop', (e) => e.dataTransfer.files.length && processFile(e.dataTransfer.files[0]));
+
+      document.querySelectorAll('.btnDemo').forEach(btn => btn.addEventListener('click', () => loadDemo(btn.dataset.demo)));
+      document.querySelectorAll('.tabBtn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+      DOM.toolBrush.addEventListener('click', () => setTool('brush'));
+      DOM.toolWand.addEventListener('click', () => setTool('wand'));
+      DOM.toolEraser.addEventListener('click', () => setTool('eraser'));
+
+      DOM.brushSize.addEventListener('input', (e) => {
+        state.brushSize = parseInt(e.target.value);
+        DOM.brushSizeVal.textContent = `${state.brushSize}px`;
+        updateBrushCursor();
+      });
+
+      DOM.brushSoftness.addEventListener('input', (e) => {
+        state.brushSoftness = parseInt(e.target.value);
+        DOM.brushSoftVal.textContent = `${state.brushSoftness}%`;
+      });
+
+      DOM.fillTolerance.addEventListener('input', (e) => {
+        state.fillTolerance = parseInt(e.target.value);
+        DOM.toleranceVal.textContent = state.fillTolerance;
+      });
+
+      setupCanvasEvents();
+
+      DOM.brandSelect.addEventListener('change', (e) => renderBrandSwatches(e.target.value));
+
+      DOM.customColorPicker.addEventListener('input', (e) => setBrandColor('Custom Shade', 'Custom Picker', e.target.value));
+      DOM.customHexInput.addEventListener('change', (e) => {
+        let hex = e.target.value.trim();
+        if(!hex.startsWith('#')) hex = '#' + hex;
+        if(/^#[0-9A-F]{6}$/i.test(hex)) setBrandColor('Custom Shade', 'Custom Hex', hex);
+      });
+
+      DOM.btnEyedropper.addEventListener('click', activateEyedropper);
+
+      DOM.blendModeSelect.addEventListener('change', (e) => { state.blendMode = e.target.value; renderComposite(); saveState(); });
+
+      document.querySelectorAll('.finishBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.finishBtn').forEach(b => {
+            b.className = 'finishBtn py-2 bg-white border-2 border-gray-200 text-gray-600 font-semibold text-xs rounded-lg hover:border-gray-300';
+          });
+          btn.className = 'finishBtn py-2 bg-brand-accent/10 border-2 border-brand-accent text-brand-accent font-semibold text-xs rounded-lg';
+          
+          state.finish = btn.dataset.finish;
+          if(state.finish === 'matte') { state.shadowPreservation = 0.8; state.highlightBoost = 0.1; }
+          else if(state.finish === 'satin') { state.shadowPreservation = 0.7; state.highlightBoost = 0.25; }
+          else if(state.finish === 'gloss') { state.shadowPreservation = 0.5; state.highlightBoost = 0.45; }
+          
+          DOM.sliderShadows.value = state.shadowPreservation * 100;
+          DOM.sliderHighlights.value = state.highlightBoost * 100;
+          DOM.valShadows.textContent = `${Math.round(state.shadowPreservation * 100)}%`;
+          DOM.valHighlights.textContent = `${Math.round(state.highlightBoost * 100)}%`;
+          
+          renderComposite();
+          saveState();
+        });
+      });
+
+      DOM.sliderIntensity.addEventListener('input', (e) => { state.colorIntensity = e.target.value / 100; DOM.valIntensity.textContent = `${e.target.value}%`; requestRender(); });
+      DOM.sliderShadows.addEventListener('input', (e) => { state.shadowPreservation = e.target.value / 100; DOM.valShadows.textContent = `${e.target.value}%`; requestRender(); });
+      DOM.sliderHighlights.addEventListener('input', (e) => { state.highlightBoost = e.target.value / 100; DOM.valHighlights.textContent = `${e.target.value}%`; requestRender(); });
+      DOM.sliderBrightness.addEventListener('input', (e) => { state.brightness = parseInt(e.target.value); DOM.valBrightness.textContent = e.target.value; requestRender(); });
+
+      [DOM.sliderIntensity, DOM.sliderShadows, DOM.sliderHighlights, DOM.sliderBrightness].forEach(sl => sl.addEventListener('change', saveState));
+
+      DOM.btnUndo.addEventListener('click', undo);
+      DOM.btnRedo.addEventListener('click', redo);
+      DOM.btnNewImage.addEventListener('click', () => {
+        DOM.editorScreen.classList.add('hidden');
+        DOM.headerActions.classList.add('hidden');
+        DOM.activeContextTag.classList.add('hidden');
+        DOM.uploadScreen.classList.remove('hidden');
+        gsap.to(DOM.uploadScreen, { duration: 0.4, opacity: 1 });
+      });
+      DOM.btnDownload.addEventListener('click', downloadDesign);
+      
+      DOM.btnToggleMask.addEventListener('click', toggleMask);
+      DOM.btnCompare.addEventListener('click', toggleCompare);
+      DOM.btnReset.addEventListener('click', () => { maskCtx.clearRect(0, 0, state.workingWidth, state.workingHeight); renderComposite(); saveState(); });
+    }
+
+    function renderBrandSwatches(brandKey) {
+      const data = BRAND_PALETTES[brandKey];
+      if(!data) return;
+
+      DOM.brandSwatchesTitle.textContent = `${data.title} Shade Card`;
+      DOM.swatchCount.textContent = `${data.shades.length} Shades`;
+      DOM.brandSwatchesGrid.innerHTML = '';
+
+      data.shades.forEach(s => {
+        const card = document.createElement('div');
+        card.className = 'p-2 bg-white rounded-xl border border-gray-200 hover:border-brand-accent cursor-pointer transition flex items-center space-x-2.5 shadow-sm';
+        card.onclick = () => setBrandColor(s.name, `${data.title.split(' ')[0]} — ${s.code}`, s.hex);
+        card.innerHTML = `
+          <div class="w-8 h-8 rounded-lg border border-black/10 shrink-0 shadow-inner" style="background-color: ${s.hex}"></div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-bold text-gray-800 truncate leading-tight">${s.name}</p>
+            <p class="text-[10px] font-mono text-brand-accent truncate">${s.code}</p>
+          </div>
+        `;
+        DOM.brandSwatchesGrid.appendChild(card);
+      });
+    }
+
+    function setBrandColor(name, code, hex) {
+      state.selectedColorName = name;
+      state.selectedColorCode = code;
+      state.selectedColorHex = hex;
+
+      DOM.activeColorPreview.style.backgroundColor = hex;
+      DOM.activeColorName.textContent = name;
+      DOM.activeColorCode.textContent = code;
+      DOM.activeColorHex.textContent = hex;
+      DOM.customColorPicker.value = hex;
+      DOM.customHexInput.value = hex;
+
+      renderComposite();
+      saveState();
+    }
+
+    async function activateEyedropper() {
+      if ('EyeDropper' in window) {
+        try {
+          const eyeDropper = new EyeDropper();
+          const result = await eyeDropper.open();
+          setBrandColor('Sampled Shade', 'Eyedropper', result.sRGBHex);
+        } catch (e) { /* Cancelled */ }
+      } else {
+        alert('Eyedropper API is not supported in this browser version. Use custom hex input.');
+      }
+    }
+
+    function setTool(tool) {
+      state.selectedTool = tool;
+      [DOM.toolBrush, DOM.toolWand, DOM.toolEraser].forEach(b => b.className = 'toolBtn p-2.5 rounded-xl border-2 border-gray-200 bg-white text-gray-600 font-semibold text-xs flex flex-col items-center justify-center space-y-1 hover:border-gray-300 transition');
+      
+      if(tool === 'brush') DOM.toolBrush.className = 'toolBtn p-2.5 rounded-xl border-2 border-brand-accent bg-brand-accent/5 text-brand-accent font-semibold text-xs flex flex-col items-center justify-center space-y-1 transition';
+      else if(tool === 'wand') DOM.toolWand.className = 'toolBtn p-2.5 rounded-xl border-2 border-brand-accent bg-brand-accent/5 text-brand-accent font-semibold text-xs flex flex-col items-center justify-center space-y-1 transition';
+      else DOM.toolEraser.className = 'toolBtn p-2.5 rounded-xl border-2 border-brand-accent bg-brand-accent/5 text-brand-accent font-semibold text-xs flex flex-col items-center justify-center space-y-1 transition';
+
+      DOM.wandControls.classList.toggle('hidden', tool !== 'wand');
+    }
+
+    function processFile(file) {
+      if(!['image/jpeg','image/png','image/webp'].includes(file.type)) { showError('Upload JPG, PNG or WEBP'); return; }
+      if(file.size > 15 * 1024 * 1024) { showError('Image size exceeds 15 MB'); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => loadImage(e.target.result);
+      reader.readAsDataURL(file);
+    }
+
+    function loadDemo(type) {
+      const c = document.createElement('canvas');
+      c.width = 1200; c.height = 800;
+      const ctx = c.getContext('2d');
+      const g = ctx.createLinearGradient(0,0,0,800);
+      
+      if(type === 'kitchen') {
+        g.addColorStop(0, '#EAE5D9'); g.addColorStop(0.7, '#CFC8B8'); g.addColorStop(1, '#4A3E3D');
+        ctx.fillStyle = g; ctx.fillRect(0,0,1200,800);
+        ctx.fillStyle = '#2A2E33'; ctx.fillRect(100,450,1000,200); // Counter
+      } else if(type === 'cafe') {
+        g.addColorStop(0, '#3D2F28'); g.addColorStop(0.7, '#231A15'); g.addColorStop(1, '#110D0A');
+        ctx.fillStyle = g; ctx.fillRect(0,0,1200,800);
+        ctx.fillStyle = '#B88A5A'; ctx.fillRect(300,500,600,180); // Wooden counter
+      } else {
+        g.addColorStop(0, '#ECE8DF'); g.addColorStop(0.7, '#D4CEBF'); g.addColorStop(1, '#5C4E43');
+        ctx.fillStyle = g; ctx.fillRect(0,0,1200,800);
+        ctx.fillStyle = '#2B303A'; ctx.beginPath(); ctx.roundRect(250,480,700,160,20); ctx.fill(); // Sofa
+      }
+      loadImage(c.toDataURL());
+    }
+
+    function showError(msg) { DOM.errorMessage.textContent = msg; DOM.uploadError.classList.remove('hidden'); }
+
+    function loadImage(url) {
+      const img = new Image();
+      img.onload = () => {
+        state.image = img;
+        state.originalWidth = img.width; state.originalHeight = img.height;
+        let w = img.width, h = img.height;
+        if (w > MAX_WORKING_DIM || h > MAX_WORKING_DIM) {
+          if (w > h) { h = Math.round((h * MAX_WORKING_DIM) / w); w = MAX_WORKING_DIM; }
+          else { w = Math.round((w * MAX_WORKING_DIM) / h); h = MAX_WORKING_DIM; }
+        }
+        state.workingWidth = w; state.workingHeight = h;
+        [DOM.imageCanvas, DOM.maskCanvas, DOM.renderCanvas].forEach(c => { c.width = w; c.height = h; });
+        imgCtx.drawImage(img, 0, 0, w, h);
+        maskCtx.clearRect(0, 0, w, h);
+        fitCanvas();
+        state.history = []; state.historyIndex = -1;
+        saveState();
+
+        gsap.to(DOM.uploadScreen, { duration: 0.4, opacity: 0, onComplete: () => {
+          DOM.uploadScreen.classList.add('hidden');
+          DOM.editorScreen.classList.remove('hidden');
+          DOM.headerActions.classList.remove('hidden');
+          DOM.headerActions.classList.add('flex');
+          DOM.activeContextTag.classList.remove('hidden');
+          DOM.activeContextTag.classList.add('flex');
+          renderComposite();
+        }});
+      };
+      img.src = url;
+    }
+
+    function fitCanvas() {
+      const vw = DOM.viewport.clientWidth - 48, vh = DOM.viewport.clientHeight - 48;
+      const aspect = state.workingWidth / state.workingHeight;
+      let sw = (vw / vh < aspect) ? vw : vh * aspect;
+      let sh = (vw / vh < aspect) ? vw / aspect : vh;
+      DOM.canvasContainer.style.width = `${sw}px`;
+      DOM.canvasContainer.style.height = `${sh}px`;
+    }
+    window.onresize = fitCanvas;
+
+    /* CANVAS PAINTING & FLOOD FILL */
+    let isDrawing = false;
+
+    function setupCanvasEvents() {
+      const c = DOM.canvasContainer;
+      c.onpointerenter = () => { if(!state.compareMode) DOM.brushCursor.classList.remove('hidden'); updateBrushCursor(); };
+      c.onpointerleave = () => { DOM.brushCursor.classList.add('hidden'); if(isDrawing) { isDrawing = false; saveState(); } };
+      
+      c.onpointermove = (e) => {
+        DOM.brushCursor.style.left = `${e.clientX}px`;
+        DOM.brushCursor.style.top = `${e.clientY}px`;
+        if(state.compareMode && isDrawing) updateCompare(e);
+        else if(isDrawing && state.selectedTool !== 'wand') paintStroke(e);
+      };
+
+      c.onpointerdown = (e) => {
+        if(state.compareMode) { isDrawing = true; updateCompare(e); return; }
+        if(state.selectedTool === 'wand') {
+          executeFloodFill(e);
+          return;
+        }
+        isDrawing = true;
+        c.setPointerCapture(e.pointerId);
+        paintStroke(e);
+      };
+
+      c.onpointerup = (e) => {
+        if(isDrawing) {
+          isDrawing = false;
+          try { c.releasePointerCapture(e.pointerId); } catch(err){}
+          if(!state.compareMode) { renderComposite(); saveState(); }
+        }
+      };
+    }
+
+    function updateBrushCursor() {
+      const rect = DOM.canvasContainer.getBoundingClientRect();
+      const scale = rect.width / state.workingWidth;
+      const sz = state.brushSize * scale;
+      DOM.brushCursor.style.width = `${sz}px`;
+      DOM.brushCursor.style.height = `${sz}px`;
+    }
+
+    function getCoords(e) {
+      const rect = DOM.canvasContainer.getBoundingClientRect();
+      return {
+        x: Math.round((e.clientX - rect.left) * (state.workingWidth / rect.width)),
+        y: Math.round((e.clientY - rect.top) * (state.workingHeight / rect.height))
+      };
+    }
+
+    function paintStroke(e) {
+      const { x, y } = getCoords(e);
+      const rad = state.brushSize / 2;
+      const softness = state.brushSoftness / 100;
+
+      maskCtx.save();
+      if(state.selectedTool === 'eraser') {
+        maskCtx.globalCompositeOperation = 'destination-out';
+        maskCtx.beginPath();
+        maskCtx.arc(x, y, rad, 0, Math.PI * 2);
+        maskCtx.fill();
+      } else {
+        maskCtx.globalCompositeOperation = 'source-over';
+        const grad = maskCtx.createRadialGradient(x, y, rad * (1 - softness), x, y, rad);
+        grad.addColorStop(0, 'rgba(255,255,255,1)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        maskCtx.fillStyle = grad;
+        maskCtx.beginPath();
+        maskCtx.arc(x, y, rad, 0, Math.PI * 2);
+        maskCtx.fill();
+      }
+      maskCtx.restore();
+      requestRender();
+    }
+
+    function executeFloodFill(e) {
+      const { x, y } = getCoords(e);
+      const w = state.workingWidth, h = state.workingHeight;
+      const imgData = imgCtx.getImageData(0,0,w,h);
+      const maskData = maskCtx.getImageData(0,0,w,h);
+      
+      const src = imgData.data;
+      const mask = maskData.data;
+      const targetIdx = (y * w + x) * 4;
+      const tr = src[targetIdx], tg = src[targetIdx+1], tb = src[targetIdx+2];
+      
+      const tol = state.fillTolerance * 3;
+      const visited = new Uint8Array(w * h);
+      const queue = [x, y];
+
+      while(queue.length > 0) {
+        const cy = queue.pop();
+        const cx = queue.pop();
+        const idx = cy * w + cx;
+
+        if(visited[idx]) continue;
+        visited[idx] = 1;
+
+        const pIdx = idx * 4;
+        const diff = Math.abs(src[pIdx] - tr) + Math.abs(src[pIdx+1] - tg) + Math.abs(src[pIdx+2] - tb);
+
+        if(diff <= tol) {
+          mask[pIdx] = 255;
+          mask[pIdx+1] = 255;
+          mask[pIdx+2] = 255;
+          mask[pIdx+3] = 255;
+
+          if(cx > 0 && !visited[idx - 1]) queue.push(cx - 1, cy);
+          if(cx < w - 1 && !visited[idx + 1]) queue.push(cx + 1, cy);
+          if(cy > 0 && !visited[idx - w]) queue.push(cx, cy - 1);
+          if(cy < h - 1 && !visited[idx + w]) queue.push(cx, cy + 1);
+        }
+      }
+
+      maskCtx.putImageData(maskData, 0, 0);
+      renderComposite();
+      saveState();
+    }
+
+    /* PHOTOREALISTIC RENDERING ENGINE */
+    let renderPending = false;
+    function requestRender() {
+      if(!renderPending) {
+        renderPending = true;
+        requestAnimationFrame(() => { renderComposite(); renderPending = false; });
+      }
+    }
+
+    function hexToRgb(hex) {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return m ? { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) } : { r: 0, g: 0, b: 0 };
+    }
+
+    function renderComposite() {
+      const w = state.workingWidth, h = state.workingHeight;
+      const imgData = imgCtx.getImageData(0, 0, w, h);
+      const maskData = maskCtx.getImageData(0, 0, w, h);
+      const outData = renderCtx.createImageData(w, h);
+
+      const src = imgData.data, mask = maskData.data, dst = outData.data;
+      const targetRgb = hexToRgb(state.selectedColorHex);
+      const intensity = state.colorIntensity;
+      const mode = state.blendMode;
+      const shadowWeight = state.shadowPreservation;
+      const highlightWeight = state.highlightBoost;
+      const bAdj = state.brightness;
+
+      for (let i = 0; i < src.length; i += 4) {
+        const maskAlpha = (mask[i + 3] / 255) * intensity;
+        let r = src[i], g = src[i + 1], b = src[i + 2], a = src[i + 3];
+
+        if (maskAlpha > 0) {
+          const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+          let cr, cg, cb;
+
+          if (mode === 'multiply') {
+            cr = (r * targetRgb.r) / 255;
+            cg = (g * targetRgb.g) / 255;
+            cb = (b * targetRgb.b) / 255;
+          } else if (mode === 'softlight') {
+            const blendChan = (base, top) => {
+              const bN = base / 255, tN = top / 255;
+              return (tN < 0.5 ? (2 * bN * tN + bN * bN * (1 - 2 * tN)) : (Math.sqrt(bN) * (2 * tN - 1) + 2 * bN * (1 - tN))) * 255;
+            };
+            cr = blendChan(r, targetRgb.r);
+            cg = blendChan(g, targetRgb.g);
+            cb = blendChan(b, targetRgb.b);
+          } else if (mode === 'photoreal') {
+            const multR = (r * targetRgb.r) / 255;
+            const multG = (g * targetRgb.g) / 255;
+            const multB = (b * targetRgb.b) / 255;
+
+            const spec = Math.pow(lum, 3) * highlightWeight * 255;
+            const shadow = Math.pow(1 - lum, 2) * shadowWeight;
+
+            cr = multR * (1 - shadow) + spec;
+            cg = multG * (1 - shadow) + spec;
+            cb = multB * (1 - shadow) + spec;
+          } else {
+            cr = targetRgb.r * lum; cg = targetRgb.g * lum; cb = targetRgb.b * lum;
+          }
+
+          cr += bAdj; cg += bAdj; cb += bAdj;
+
+          r = r * (1 - maskAlpha) + cr * maskAlpha;
+          g = g * (1 - maskAlpha) + cg * maskAlpha;
+          b = b * (1 - maskAlpha) + cb * maskAlpha;
+        }
+
+        dst[i] = Math.min(255, Math.max(0, r));
+        dst[i+1] = Math.min(255, Math.max(0, g));
+        dst[i+2] = Math.min(255, Math.max(0, b));
+        dst[i+3] = a;
+      }
+
+      renderCtx.putImageData(outData, 0, 0);
+      if(state.compareMode) applyCompare();
+    }
+
+    /* HISTORY, VIEWPORT, & EXPORT */
+    function saveState() {
+      if(state.historyIndex < state.history.length - 1) state.history = state.history.slice(0, state.historyIndex + 1);
+      state.history.push({
+        mask: maskCtx.getImageData(0,0,state.workingWidth, state.workingHeight),
+        colorHex: state.selectedColorHex,
+        colorName: state.selectedColorName,
+        colorCode: state.selectedColorCode,
+        mode: state.blendMode,
+        finish: state.finish,
+        intensity: state.colorIntensity,
+        shadows: state.shadowPreservation,
+        highlights: state.highlightBoost,
+        brightness: state.brightness
+      });
+      if(state.history.length > MAX_HISTORY) state.history.shift(); else state.historyIndex++;
+      DOM.btnUndo.disabled = state.historyIndex <= 0;
+      DOM.btnRedo.disabled = state.historyIndex >= state.history.length - 1;
+    }
+
+    function undo() {
+      if(state.historyIndex > 0) { state.historyIndex--; restoreState(state.history[state.historyIndex]); }
+    }
+
+    function redo() {
+      if(state.historyIndex < state.history.length - 1) { state.historyIndex++; restoreState(state.history[state.historyIndex]); }
+    }
+
+    function restoreState(s) {
+      maskCtx.putImageData(s.mask, 0, 0);
+      setBrandColor(s.colorName, s.colorCode, s.colorHex);
+      state.blendMode = s.mode;
+      state.finish = s.finish;
+      state.colorIntensity = s.intensity;
+      state.shadowPreservation = s.shadows;
+      state.highlightBoost = s.highlights;
+      state.brightness = s.brightness;
+      DOM.blendModeSelect.value = s.mode;
+      renderComposite();
+    }
+
+    function switchTab(id) {
+      document.querySelectorAll('.tabBtn').forEach(b => b.className = (b.dataset.tab === id) ? 'tabBtn flex-1 py-3 text-xs font-bold border-b-2 border-brand-accent text-brand-accent flex items-center justify-center space-x-1.5 transition' : 'tabBtn flex-1 py-3 text-xs font-bold border-b-2 border-transparent text-gray-500 hover:text-gray-700 flex items-center justify-center space-x-1.5 transition');
+      document.querySelectorAll('.tabContent').forEach(c => c.classList.add('hidden'));
+      document.getElementById(`tab${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.remove('hidden');
+    }
+
+    function toggleMask() {
+      state.isMaskVisible = !state.isMaskVisible;
+      DOM.maskCanvas.classList.toggle('hidden', !state.isMaskVisible);
+    }
+
+    function toggleCompare() {
+      state.compareMode = !state.compareMode;
+      DOM.compareDivider.classList.toggle('hidden', !state.compareMode);
+      if(!state.compareMode) DOM.renderCanvas.style.clipPath = 'none';
+      else applyCompare();
+    }
+
+    function updateCompare(e) {
+      const rect = DOM.canvasContainer.getBoundingClientRect();
+      state.comparePos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      DOM.compareDivider.style.left = `${state.comparePos * 100}%`;
+      applyCompare();
+    }
+
+    function applyCompare() {
+      DOM.renderCanvas.style.clipPath = `polygon(${state.comparePos * 100}% 0, 100% 0, 100% 100%, ${state.comparePos * 100}% 100%)`;
+    }
+
+    function downloadDesign() {
+      const exp = document.createElement('canvas');
+      exp.width = state.originalWidth; exp.height = state.originalHeight;
+      const ctx = exp.getContext('2d');
+      ctx.drawImage(state.image, 0, 0);
+      ctx.drawImage(DOM.renderCanvas, 0, 0, state.originalWidth, state.originalHeight);
+
+      // Watermark / Brand Spec stamp
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(20, exp.height - 70, 450, 50);
+      ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillText(`${state.selectedColorName} (${state.selectedColorCode})`, 35, exp.height - 42);
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillStyle = '#E5E7EB';
+      ctx.fillText(`Space: ${DOM.activeCategoryLabel.textContent} | Finish: ${state.finish.toUpperCase()}`, 35, exp.height - 26);
+
+      const link = document.createElement('a');
+      link.download = `wallify-design-${state.selectedColorName.toLowerCase().replace(/\s+/g, '-')}.png`;
+      link.href = exp.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>
